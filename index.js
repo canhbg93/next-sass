@@ -15,10 +15,9 @@ module.exports = (nextConfig = {}) => {
       const {
         cssModules,
         cssLoaderOptions,
-        sassLoaderOptions = {},
-        filename
+        sassLoaderOptions = {}
       } = nextConfig
-      const { filename } = sassLoaderOptions || {};
+      const { filename = 'static/style.css' } = sassLoaderOptions || {};
       // Support the user providing their own instance of ExtractTextPlugin.
       // If extractCSSPlugin is not defined we pass the same instance of ExtractTextPlugin to all css related modules
       // So that they compile to the same file in production
@@ -26,13 +25,11 @@ module.exports = (nextConfig = {}) => {
         nextConfig.extractCSSPlugin || options.extractCSSPlugin
 
       if (!extractCSSPlugin) {
-        extractCSSPlugin = new ExtractTextPlugin({
-          filename: filename || 'static/style.css'
-        })
+        extractCSSPlugin = new ExtractTextPlugin({ filename })
         config.plugins.push(extractCSSPlugin)
         options.extractCSSPlugin = extractCSSPlugin
         if (!isServer) {
-          config = commonsChunkConfig(config, /\.(scss|sass)$/)
+          config = commonsChunkConfig(config, /\.(scss|sass|css)$/)
         }
       }
 
@@ -49,16 +46,21 @@ module.exports = (nextConfig = {}) => {
         ]
       })
 
-      config.module.rules.push(
-        {
-          test: /\.scss$/,
-          use: options.defaultLoaders.sass
-        },
-        {
-          test: /\.sass$/,
-          use: options.defaultLoaders.sass
-        }
-      )
+      options.defaultLoaders.css = cssLoaderConfig(config, extractCSSPlugin, {
+        cssModules,
+        cssLoaderOptions,
+        dev,
+        isServer
+      })
+
+      config.module.rules.push({
+        test: /\.(scss|sass)$/,
+        use: options.defaultLoaders.sass
+      })
+      config.module.rules.push({
+        test: /\.css$/,
+        use: options.defaultLoaders.css
+      })
 
       if (typeof nextConfig.webpack === 'function') {
         return nextConfig.webpack(config, options)
